@@ -10,43 +10,61 @@ export function parseQuestions(text: string): Question[] {
 
   const lines = text
     .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line !== "");
+    .map((line) => line.trim());
 
   let currentQuestion = "";
   let options: string[] = [];
   let answer = "";
+  let type: "mcq" | "text" = "text";
 
-  function saveQuestion() {
-    if (!currentQuestion) return;
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
 
-    questions.push({
-      type: options.length > 0 ? "mcq" : "text",
-      question: currentQuestion,
-      options,
-      answer,
-    });
-  }
+    if (line === "") continue;
 
-  for (const line of lines) {
+    // New question
     if (/^\d+\./.test(line)) {
-      saveQuestion();
+      if (currentQuestion) {
+        questions.push({
+          question: currentQuestion.trim(),
+          options,
+          answer,
+          type,
+        });
+      }
 
       currentQuestion = line.replace(/^\d+\.\s*/, "");
       options = [];
       answer = "";
+      type = "text";
     }
 
+    // MCQ option
     else if (/^[A-D]\./.test(line)) {
       options.push(line.replace(/^[A-D]\.\s*/, ""));
+      type = "mcq";
     }
 
+    // Answer
     else if (line.toLowerCase().startsWith("answer")) {
       answer = line.split(":")[1]?.trim() || "";
     }
+
+    // Any other line belongs to the question
+    else {
+      currentQuestion += "\n" + line;
+    }
   }
 
-  saveQuestion();
+  // Last question
+  if (currentQuestion) {
+    questions.push({
+      question: currentQuestion.trim(),
+      options,
+      answer,
+      type,
+    });
+  }
 
   return questions;
 }
