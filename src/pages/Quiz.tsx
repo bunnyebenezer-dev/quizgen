@@ -9,8 +9,8 @@ function Quiz() {
   const [quiz, setQuiz] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [answers, setAnswers] = useState<any>({});
-  const [score, setScore] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [started, setStarted] = useState(false);
 
 const [candidateName, setCandidateName] = useState("");
@@ -55,12 +55,12 @@ useEffect(() => {
   if (
     started &&
     timeLeft === 0 &&
-    score === null &&
+    !submitted &&
     !submitting
   ) {
     submitQuiz();
   }
-}, [timeLeft, started, score, submitting]);
+}, [timeLeft, started, submitted, submitting]);
 
 
   function updateAnswer(index: number, value: string) {
@@ -142,6 +142,7 @@ useEffect(() => {
   }
 
  setSubmitting(false);
+setSubmitted(true);
 
 navigate("/review", {
   state: {
