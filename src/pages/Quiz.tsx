@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../supabase";
 
 function Quiz() {
@@ -9,9 +9,11 @@ function Quiz() {
   const [quiz, setQuiz] = useState<any>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [answers, setAnswers] = useState<any>({});
+  const answersRef = useRef<any>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [started, setStarted] = useState(false);
+  const [expired, setExpired] = useState(false);
 
 const [candidateName, setCandidateName] = useState("");
 const [candidateEmail, setCandidateEmail] = useState("");
@@ -19,6 +21,10 @@ const [studentId, setStudentId] = useState("");
 
 const [alreadySubmitted, setAlreadySubmitted] = useState(false);
 const [previousScore, setPreviousScore] = useState<any>(null);
+
+useEffect(() => {
+  answersRef.current = answers;
+}, [answers]);
 
   useEffect(() => {
     async function getQuiz() {
@@ -29,11 +35,21 @@ const [previousScore, setPreviousScore] = useState<any>(null);
         .single();
 
       if (error) {
-        console.log(error);
-        return;
-      }
+  console.log(error);
+  return;
+}
 
-     setQuiz(data);
+const now = new Date();
+const expiry = new Date(data.expiry);
+
+if (now > expiry) {
+  setExpired(true);
+  return;
+}
+
+setQuiz(data);
+
+     
     }
 
     getQuiz();
@@ -61,6 +77,32 @@ useEffect(() => {
     submitQuiz();
   }
 }, [timeLeft, started, submitted, submitting]);
+
+
+useEffect(() => {
+  if (!started || submitted || submitting || !quiz) {
+    return;
+  }
+
+  const expiryTime = new Date(quiz.expiry).getTime();
+  const now = Date.now();
+
+  const delay = expiryTime - now;
+
+  if (delay <= 0) {
+    setSubmitted(true);
+    submitQuiz();
+    return;
+  }
+
+  const timeout = setTimeout(() => {
+    setSubmitted(true);
+    submitQuiz();
+  }, delay);
+
+  return () => clearTimeout(timeout);
+
+}, [started, submitted, submitting, quiz]);
 
 
   function updateAnswer(index: number, value: string) {
@@ -98,12 +140,17 @@ useEffect(() => {
 
 
   async function submitQuiz() {
+
+if (submitted || submitting) {
+  return;
+}
+
   setSubmitting(true);
 
   let total = 0;
 
   quiz.questions.forEach((q: any, index: number) => {
-    const selected = (answers[index] || "")
+    const selected = (answersRef.current[index] || "")
       .trim()
       .toLowerCase();
 
@@ -127,7 +174,7 @@ useEffect(() => {
       candidate_name: candidateName,
       candidate_email: candidateEmail,
       student_id: studentId,
-      answers,
+      answers: answersRef.current,
       score: total,
       total_questions: quiz.questions.length,
       percentage,
@@ -147,10 +194,29 @@ setSubmitted(true);
 navigate("/review", {
   state: {
     quiz,
-    answers,
+    answers: answersRef.current,
     score: total,
   },
 });
+}
+
+
+if (expired) {
+  return (
+    <main className="quiz-container">
+      <section className="score-card">
+        <h1>Quiz Closed</h1>
+
+        <p>
+          This quiz has expired and is no longer available.
+        </p>
+
+        <p>
+          Please contact your instructor if you believe this is an error.
+        </p>
+      </section>
+    </main>
+  );
 }
 
 
@@ -241,6 +307,15 @@ navigate("/review", {
   if (exists) {
     return;
   }
+
+
+  const now = new Date();
+const expiry = new Date(quiz.expiry);
+
+if (now > expiry) {
+  setExpired(true);
+  return;
+}
 
 
   setTimeLeft(quiz.timer * 60);
