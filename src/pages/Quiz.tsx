@@ -105,6 +105,41 @@ useEffect(() => {
 }, [started, submitted, submitting, quiz]);
 
 
+function renderQuestion(text: string) {
+  const codeRegex = /```(?:cpp|c\+\+)?\n([\s\S]*?)```/;
+
+  const match = text.match(codeRegex);
+
+  if (!match) {
+    return <>{text}</>;
+  }
+
+  const before = text.replace(codeRegex, "").trim();
+
+  return (
+    <>
+      {before && <p>{before}</p>}
+
+      <pre
+        style={{
+          background: "#1e293b",
+          color: "#f8fafc",
+          padding: "16px",
+          borderRadius: "10px",
+          overflowX: "auto",
+          fontFamily: "Consolas, monospace",
+          fontSize: "15px",
+          lineHeight: 1.5,
+          marginTop: "12px",
+        }}
+      >
+        <code>{match[1]}</code>
+      </pre>
+    </>
+  );
+}
+
+
   function updateAnswer(index: number, value: string) {
     setAnswers({
       ...answers,
@@ -361,9 +396,11 @@ if (now > expiry) {
           key={index}
         >
 
-          <h2 className="question-title">
-            {index + 1}. {q.question}
-          </h2>
+          <div className="question-title">
+  <strong>{index + 1}.</strong>
+
+  {renderQuestion(q.question)}
+</div>
 
 
           {q.type === "mcq" ? (
